@@ -53,10 +53,10 @@ if st.session_state['button'] == True:
             #---------   Добавляем налог с купонов ---
             if use_nalog:
                 for index,row in pl.iterrows():
-                        pl.loc[len(pl.index)] = [pl['dates'][index],round(pl['amounts'][index]*(-0.13),2)]
+                        pl = pd.concat([pl, pd.DataFrame({'dates': pl['dates'][index], 'amounts': round(pl['amounts'][index]*(-0.13),2)}, index=[0])],ignore_index=True)                              
                 #--- если купили дешевле, то еще в конце срока
                 if f_buysum < f_endsum:
-                    pl.loc[len(pl.index)] = [f_enddate,round((f_endsum-f_buysum)*(-0.13),2)]                              
+                    pl = pd.concat([pl, pd.DataFrame({'dates': f_enddate, 'amounts': round((f_endsum-f_buysum)*(-0.13),2)}, index=[0])],ignore_index=True)                              
             #---------   Добавляем покупку  -----------
             pl.loc[len(pl.index)] = [f_buydate, f_buysum*(-1)]
             #---------   Добавляем погашение -----

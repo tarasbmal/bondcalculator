@@ -1,6 +1,6 @@
 #----------------------------------------------------------------------
 #----------------------------------------------------------------------
-#-------   Процедура получения данных по облигации с сайта
+#-------   Процедура получения данных по облигации с сайта smart-lab.ru
 #----------------------------------------------------------------------
 #----------------------------------------------------------------------
 def get_fi_data(p_isin):
@@ -16,6 +16,7 @@ def get_fi_data(p_isin):
     fi_nkd = ""
     fi_price = ""
     #-----------------------------------
+    #https://www.moex.com/ru/issue.aspx?board=TQCB&code=RU000A0ZYEB1&utm_source=www.moex.com/#/bond_4
     url = 'https://smart-lab.ru/q/bonds/' + p_isin
     hdr={'User-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36'}
     response = requests.get(url=url,stream=True, headers=hdr, verify=False)
