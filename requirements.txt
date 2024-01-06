@@ -1,0 +1,7 @@
+pandas
+streamlit
+numpy
+datetime 
+pyxirr
+requests
+BeautifulSoup
