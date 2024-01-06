@@ -4,4 +4,4 @@ numpy
 datetime 
 pyxirr
 requests
-BeautifulSoup
+bs4==4.12.2
