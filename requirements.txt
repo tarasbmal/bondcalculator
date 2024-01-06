@@ -4,4 +4,4 @@ numpy
 datetime 
 pyxirr
 requests
-bs4==4.12.2
+bs4
