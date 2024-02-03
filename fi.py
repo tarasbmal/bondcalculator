@@ -15,6 +15,7 @@ def get_fi_data(p_isin):
     fi_nominal = ""
     fi_nkd = ""
     fi_price = ""
+    fi_couppl = ""  # Доходность купона от номинала
     #-----------------------------------
     #https://www.moex.com/ru/issue.aspx?board=TQCB&code=RU000A0ZYEB1&utm_source=www.moex.com/#/bond_4
     url = 'https://smart-lab.ru/q/bonds/' + p_isin
@@ -22,7 +23,7 @@ def get_fi_data(p_isin):
     response = requests.get(url=url,stream=True, headers=hdr, verify=False)
     st_code = response.status_code
     if st_code != 200:
-        return 0, fi_name, fi_mat, fi_offer, fi_nominal, fi_nkd, fi_price,  ""    #-- облигация не найдена
+        return 0, fi_name, fi_mat, fi_offer, fi_nominal, fi_nkd, fi_price, fi_couppl, ""    #-- облигация не найдена
     tabs = pd.read_html(response.text)
     #--------------------------------
     #-----   Купоны -----------------
@@ -31,14 +32,24 @@ def get_fi_data(p_isin):
     # print(df.dtypes)
     coup = df[["Дата купона","Купон"]]  #-- Оставим только нужные колонки
     coup.columns = ["cd","amounts"] #-- переименуем столбцы
-    coup["dates"] = datetime.datetime.today()   #-- Новый столбец даты
+    coup["dates"] = datetime.date(2000,1,2)   #-- Новый столбец даты
+    coup["comment"] = ""   #-- Комментарий
     for index,row in coup.iterrows():
-        coup['dates'][index] = datetime.datetime.strptime(coup['cd'][index], "%d-%m-%Y")
-    coup = coup[["dates","amounts"]]    #-- оставляем только нужные поля
+        coup['dates'][index] = datetime.datetime.strptime(coup['cd'][index], "%d-%m-%Y").date()
+        coup['comment'][index] = "Купон"
+    coup = coup[["dates","amounts","comment"]]    #-- оставляем только нужные поля
     #---------------------------------------------------------
     #-----------  Поиск параметров облигации ----------------------
     #---------------------------------------------------------
     soup = BeautifulSoup(response.text, "html.parser")  
+    #--- Проверка облигации с переменным купоном (такую не обрабатывем)        
+    title = soup.title # Get title Tag
+    ttl = title.string
+    if "с переменным купоном" in ttl:     
+        return -1, fi_name, fi_mat, fi_offer, fi_nominal, fi_nkd, fi_price, fi_couppl, ""    #-- облигация c переменным купоном
+    #-----  Вывод данных (для тестирования)
+    #with open("soup.txt", "w") as file:
+    #    file.write(str(soup))
     divs = soup.find_all("div")
     #---------  Флаги ---------------
     flag_name = 0
@@ -47,6 +58,7 @@ def get_fi_data(p_isin):
     flag_nominal = 0
     flag_nkd = 0
     flag_price = 0
+    flag_couppl = 0
     #--------  Цикл для извлечения параметров ----  
     for div in divs:
         if div.get("class") == ['quotes-simple-table__item']:
@@ -72,6 +84,9 @@ def get_fi_data(p_isin):
             if flag_price == 1:
                 flag_price = 0
                 fi_price = dtext[0:-1]  #убираем знак %
+            #if flag_couppl == 1:
+            #    flag_couppl = 0
+            #    fi_couppl = dtext[0:-1]  #убираем знак %               
             #--------------------------------------
             if dtext == "Имя облигации":
                 flag_name = 1
@@ -85,8 +100,14 @@ def get_fi_data(p_isin):
                 flag_nkd = 1
             if "Котировка облигации" in dtext:
                 flag_price = 1
+            if "Доходность купона от" in dtext:
+                flag_couppl = 1                
             #------------------------------------
-    return 1, fi_name, fi_mat, fi_offer, fi_nominal, fi_nkd, fi_price, coup    #-- успешное завершение, облигация найдена
+        elif flag_couppl == 1:
+            flag_couppl = 0
+            dtext = div.text.strip()
+            fi_couppl = dtext[0:-1]  #убираем знак %   
+    return 1, fi_name, fi_mat, fi_offer, fi_nominal, fi_nkd, fi_price, fi_couppl, coup    #-- успешное завершение, облигация найдена
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
