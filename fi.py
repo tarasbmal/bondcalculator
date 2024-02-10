@@ -10,9 +10,8 @@ def micex_get_sec(p_code):
 	data = pd.read_json(url)
 	#---- преобразуем данные в нормальный фрейм -----
 	data = pd.DataFrame(data=data.iloc[1, 0], columns=data.iloc[0, 0])
-	#-----  Фильтруем c условием ИЛИ ----
-	res = data[(data["SECID"] == p_code) | (data["ISIN"] == p_code) | (data["REGNUMBER"] == p_code)]
-	#ret = res['SECID'].max()
+	#-----  Фильтруем по секциям и кодам  ----
+	res = data[( (data["BOARDID"] == 'TQOB') | (data["BOARDID"] == 'TQCB') | (data["BOARDID"] == 'TQOD') | (data["BOARDID"] == 'TQIR') | (data["BOARDID"] == 'TQOY')) & ( (data["SECID"] == p_code) | (data["ISIN"] == p_code) | (data["REGNUMBER"] == p_code))]	#ret = res['SECID'].max()
 	if len(res.index)>0:
 		#-- Код бумаги 
 		sec_id = res['SECID'].iloc[0]
@@ -45,6 +44,8 @@ def micex_get_sec(p_code):
 		coup_period = res['COUPONPERIOD'].iloc[0]
 		#-- НКД (Внимание! Сумма НКД для замещающих облигаций, облигаций , номинированных в валюте - в рублях, т.е. нужно пересчитывать в валюту или просто посчитать НКД исходя из размера купона)
 		nkd = res['ACCRUEDINT'].iloc[0]
+		#-- Дата расчетов
+		set_date = datetime.datetime.strptime(res['SETTLEDATE'].iloc[0], "%Y-%m-%d").date()
 		#-- Цена (предыдущая)
 		price = res['PREVPRICE'].iloc[0]
 		#-----------------------------------------------------------------------------
@@ -64,9 +65,9 @@ def micex_get_sec(p_code):
 		#------------------------------------------------------
 		#------------------------------------------------------
 		#------------------------------------------------------
-		ret = sec_id,sec_name,sec_isin,mat_date,offer_date,nom_sum,nom_cur,r_cur,coup_sum,coup_date,coup_prc,coup_period,nkd,price
+		ret = sec_id,sec_name,sec_isin,mat_date,offer_date,nom_sum,nom_cur,r_cur,coup_sum,coup_date,coup_prc,coup_period,nkd,set_date,price
 	else:
-		ret = "","","","","",0,"","",0,"",0,0,0,0
+		ret = "","","","","",0,"","",0,"",0,0,0,'',0
 	return ret
 
 #----------------------------------------------------------------------
