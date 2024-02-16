@@ -67,7 +67,9 @@ if sec_code:
         #f_buydate = datetime.datetime(2024, 2, 9).date()
         #----------------  Результаты работы -------------
         with col1:
-            st.subheader('Облигация "' + sec_name + '"')
+            #st.subheader(sec_name)
+            st.info("$$\Large\kern5cm " +sec_name.replace(" ","\space") + "$$")
+            st.markdown("**ISIN: " + sec_isin + "**")
             if offer_date != "":
                 st.markdown("**Дата оферты:         " + offer_date.strftime("%d-%m-%Y") + "**")
             #else:
@@ -117,7 +119,8 @@ if sec_code:
             #------------------------------------------------
             #----------  Сохраняем в общий фрейм   ----------
             #------------------------------------------------    
-            pl = coup[["dates","s_dates","amounts","comment"]]    #-- оставляем только нужные поля        
+            pl = coup[["dates","s_dates","amounts","comment"]].copy()    #-- оставляем только нужные поля    
+            pl.reset_index(drop= True , inplace= True )     #-- сброс индекса      
             #--------  Если купон = 0, ту устанавливаем последний известный 
             amounts_prev = 0
             for index, row in pl.iterrows():
@@ -131,7 +134,8 @@ if sec_code:
                 last_coup_date = pl['s_dates'].iloc[-1]  
                 if last_coup_date < f_s_enddate:    
                     part_sum = round(float(nom_sum)*float((f_s_enddate-last_coup_date).days)*float(coup_prc)/36500,2)
-                    pl.loc[len(pl.index)] = [f_enddate, f_s_enddate, part_sum,"Купон (часть)"]              
+                    #pl.loc[len(pl.index)] = [f_enddate, f_s_enddate, part_sum,"Купон (часть)"]  
+                    pl = pd.concat([pl, pd.DataFrame({'dates': f_enddate, 's_dates': f_s_enddate,'amounts': part_sum,'comment': "Купон (часть)"}, index=[0])],ignore_index=True)                              
             #---------   Добавляем налог с купонов ---
             if use_nalog:
                 n = 0
@@ -144,10 +148,15 @@ if sec_code:
                         else:                            
                             pl = pd.concat([pl, pd.DataFrame({'dates': pl['dates'][index], 's_dates': pl['s_dates'][index],'amounts': round(pl['amounts'][index]*(-0.13),2),'comment': "Налог с суммы купона"}, index=[0])],ignore_index=True)                              
             #---------   Добавляем покупку  -----------
-            pl.loc[len(pl.index)] = [f_buydate, f_s_buydate, f_buysum*(-1),"Сумма сделки покупки, включая НКД"]
+            #pl.to_csv("pl_.csv",sep=";")   #-----  Выгрузка в файл для тестирования
+            #pl.loc[len(pl.index)] = [f_buydate, f_s_buydate, f_buysum*(-1),"Сумма сделки покупки, включая НКД"]
+            pl = pd.concat([pl, pd.DataFrame({'dates': f_buydate, 's_dates': f_s_buydate,'amounts': f_buysum*(-1),'comment': "Сумма сделки покупки, включая НКД"}, index=[0])],ignore_index=True)                              
+            #pl.to_csv("pl__.csv",sep=";")   #-----  Выгрузка в файл для тестирования
             #---------   Добавляем комиссию   -----------
             if com_sum>0:
-                pl.loc[len(pl.index)] = [f_buydate, f_s_buydate, com_sum*(-1),"Комиссия при покупке"]
+                #pl.loc[len(pl.index)] = [f_buydate, f_s_buydate, com_sum*(-1),"Комиссия при покупке"]
+                pl = pd.concat([pl, pd.DataFrame({'dates': f_buydate, 's_dates': f_s_buydate,'amounts': com_sum*(-1),'comment': "Комиссия при покупке"}, index=[0])],ignore_index=True)                              
+            #pl.to_csv("pl___.csv",sep=";")   #-----  Выгрузка в файл для тестирования
             #--------- Проверяем амортизации. Если есть , то заносим                 
             nnn = 0
             for index,row in coup.iterrows():
@@ -155,22 +164,24 @@ if sec_code:
                 if nnn>=2 and coup['prc'][index]>0:  # для второго купона
                     nm = round(coup['amounts'][index] * 36500 / coup['prc'][index] / float((coup['s_dates'][index]-s_date_prev).days),0)
                     if nm != "nan":
-                        nom_now = nm
-                        if nom_now < nom_prev:
+                        if nm < nom_prev:
                             s_dt = s_date_prev
                             dt = fi.get_next_work_day(s_dt)
-                            asum = nom_prev - nom_now
-                            if asum*100/nom_now > 3:    # больше 3-х %
+                            asum = nom_prev - nm
+                            if asum*100/nm > 3:    # больше 3-х %
+                                nom_now = nm
                                 #-------  Добавляем запись частичного погашения 
                                 #st.text(asum)
-                                pl.loc[len(pl.index)] = [dt, s_dt, asum,"Частичное погашение тела облигации"]  
+                                #pl.loc[len(pl.index)] = [dt, s_dt, asum,"Частичное погашение тела облигации"]  
+                                pl = pd.concat([pl, pd.DataFrame({'dates': dt, 's_dates': s_dt,'amounts': asum,'comment': "Частичное погашение тела облигации"}, index=[0])],ignore_index=True)                              
                                 #------------------------------------------------------
                                 nom_prev = nom_now
                 s_date_prev = coup['s_dates'][index]
             #---------   Добавляем окончательное погашение -----
             #st.text("Последняя сумма -->" + str(nom_now))
             if nom_now>0:
-                pl.loc[len(pl.index)] = [f_enddate,f_s_enddate,nom_now,"Погашение тела облигации"]
+                #pl.loc[len(pl.index)] = [f_enddate,f_s_enddate,nom_now,"Погашение тела облигации"]
+                pl = pd.concat([pl, pd.DataFrame({'dates': f_enddate, 's_dates': f_s_enddate,'amounts': nom_now,'comment': "Погашение тела облигации"}, index=[0])],ignore_index=True)                              
             #--- если купили дешевле, то еще налог - в конце срока
             if use_nalog:
                 if (f_buysum + com_sum) < nom_00:
@@ -179,17 +190,19 @@ if sec_code:
                         pl = pd.concat([pl, pd.DataFrame({'dates': f_enddate, 's_dates': f_s_enddate,'amounts': round((nom_sum-f_buysum-com_sum)*(-0.13),2),'comment': "Налог с разницы сумм погаш. и покупки с комиссией"}, index=[0])],ignore_index=True)     
             #st.dataframe(pl,800)                           
             #-------  Запуск расчета ------
-            pl2 = pl[["dates","amounts"]] 
-            IRR = xirr(pl2)
+            #pl2 = pl[["dates","amounts"]].copy() # 
+            #pl[["dates","amounts"]].to_csv("2.csv",sep=";")   #-----  Выгрузка в файл для тестирования
+            IRR = xirr(pl[["dates","amounts"]])
             #st.divider()
             #-------  Только ненулевые суммы  
-            rslt_pl = pl[pl['amounts'] != 0] 
+            rslt_pl = pl[pl['amounts'] != 0].copy() 
             #-------  Перерасчитываем дисконтируемые суммы потоков + добавляем столбец даты в нужном формате 
             rslt_pl['d_ams'] = 0
             rslt_pl['str_dates'] = ""
             rslt_pl['str_s_dates'] = ""
             dams_total = 0
             dur = 0
+            #rslt_pl.to_csv("rslt_pl.csv",sep=";")   #-----  Выгрузка в файл для тестирования
             for index, row in rslt_pl.iterrows():
                 rslt_pl['str_dates'].loc[index] = rslt_pl['dates'].loc[index].strftime("%d-%m-%Y")
                 rslt_pl['str_s_dates'].loc[index] = rslt_pl['s_dates'].loc[index].strftime("%d-%m-%Y")
@@ -226,8 +239,8 @@ if sec_code:
                 rslt_pl2.reset_index(drop= True , inplace= True )     #-- сброс индекса  
                 rslt_pl3 = rslt_pl2[['str_dates','str_s_dates','comment','amounts','d_ams']]
                 rslt_pl3.columns = ['Дата потока','  Дата расч.','         Вид суммы', '  Сумма','Дисконтир.сумма']   #-- переименовать столбцы
-                if len(rslt_pl3.index)>=25:
-                    st.dataframe(rslt_pl3, 1200, 900) # Сначала ширина, потом - высота 
+                if len(rslt_pl3.index)>=26:
+                    st.dataframe(rslt_pl3, 1200, 1000) # Сначала ширина, потом - высота 
                 else:
                     st.dataframe(rslt_pl3, 1200) # Сначала ширина, потом - высота 
             #col1, col2 = st.columns([1,1.1])
