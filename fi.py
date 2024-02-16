@@ -37,7 +37,10 @@ def micex_get_sec(p_code):
 		#-- Сумма купона
 		coup_sum = res['COUPONVALUE'].iloc[0]
 		#-----  Дата ближайшего купона
-		coup_date = datetime.datetime.strptime(res['NEXTCOUPON'].iloc[0], "%Y-%m-%d").date()
+		if res['NEXTCOUPON'].iloc[0] != "0000-00-00":
+			coup_date = datetime.datetime.strptime(res['NEXTCOUPON'].iloc[0], "%Y-%m-%d").date()
+		else:
+			coup_date = ""
 		#-- % купона - нужно еще делить на 10000
 		coup_prc = res['COUPONPERCENT'].iloc[0]
 		#-- Период купона 
@@ -71,6 +74,22 @@ def micex_get_sec(p_code):
 	return ret
 
 #----------------------------------------------------------------------
+#--- 	реальная дата потока - на следующий рабочий день 
+#----------------------------------------------------------------------
+def get_next_work_day(p_date):
+	import datetime 
+	#--- реальная дата потока - на следующий рабочий день ---
+	wd = p_date 
+	if wd == 6:	#--суббота
+		nnn = 3
+	elif wd == 7:	#--воскресенье
+		nnn = 2           
+	else:
+		nnn = 1
+	return (p_date + datetime.timedelta(days=nnn))
+	#--------------------------------------------------------
+
+#----------------------------------------------------------------------
 #-------   Процедура получения данных по купонам с сайта smart-lab.ru
 #----------------------------------------------------------------------
 def get_coups(p_isin):
@@ -86,14 +105,25 @@ def get_coups(p_isin):
     #-----   Купоны -----------------
     tabs = pd.read_html(response.text)
     df = tabs[0]
-    coup = df[["Дата купона","Купон"]]  #-- Оставим только нужные колонки
-    coup.columns = ["cd","amounts"] #-- переименуем столбцы
+    #-----  Выгрузка в файл для тестирования
+    #df.to_csv("coups.csv",sep=";")
+    #-------------------------------------------
+    coup = df[["Дата купона","Купон","Дох. купона"]]  #-- Оставим только нужные колонки (дох.купона нужна для вычисления аммортизаций)
+    coup.columns = ["cd","amounts","prc_str"] #-- переименуем столбцы
     coup["dates"] = datetime.date(2000,1,2)   #-- Новый столбец даты
+    coup["s_dates"] = datetime.date(2000,1,2)   #-- Новый столбец даты - дата расчетов
     coup["comment"] = ""   #-- Комментарий
+    coup["prc"] = 0.00	# Процент купона
     for index,row in coup.iterrows():
-        coup['dates'][index] = datetime.datetime.strptime(coup['cd'][index], "%d-%m-%Y").date()
+        coup['s_dates'][index] = datetime.datetime.strptime(coup['cd'][index], "%d-%m-%Y").date()
+        coup['dates'][index] = get_next_work_day(coup['s_dates'][index])
+        #--------------------------------------------------------
         coup['comment'][index] = "Купон"
-    coup = coup[["dates","amounts","comment"]]    #-- оставляем только нужные поля
+        if coup['prc_str'][index][-1] == "%":
+        	coup['prc'][index] = float(coup['prc_str'][index][:-1])
+        else:
+        	coup['prc'][index] = 0.00
+    coup = coup[["dates","s_dates","amounts","comment","prc"]]    #-- оставляем только нужные поля
     return 1, coup    #-- успешное завершение, облигация найдена
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
