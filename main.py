@@ -152,20 +152,23 @@ if sec_code:
             nnn = 0
             for index,row in coup.iterrows():
                 nnn = nnn + 1
-                if nnn>=2:  # для второго купона
-                    nom_now = round(coup['amounts'][index] * 36500 / coup['prc'][index] / float((coup['s_dates'][index]-s_date_prev).days),0)
-                    if nom_now < nom_prev:
-                        s_dt = s_date_prev
-                        dt = fi.get_next_work_day(s_dt)
-                        asum = nom_prev - nom_now
-                        if asum*100/nom_now > 3:    # больше 3-х %
-                            #-------  Добавляем запись частичного погашения 
-                            st.text(asum)
-                            pl.loc[len(pl.index)] = [dt, s_dt, asum,"Частичное погашение тела облигации"]  
-                            #------------------------------------------------------
-                            nom_prev = nom_now
+                if nnn>=2 and coup['prc'][index]>0:  # для второго купона
+                    nm = round(coup['amounts'][index] * 36500 / coup['prc'][index] / float((coup['s_dates'][index]-s_date_prev).days),0)
+                    if nm != "nan":
+                        nom_now = nm
+                        if nom_now < nom_prev:
+                            s_dt = s_date_prev
+                            dt = fi.get_next_work_day(s_dt)
+                            asum = nom_prev - nom_now
+                            if asum*100/nom_now > 3:    # больше 3-х %
+                                #-------  Добавляем запись частичного погашения 
+                                #st.text(asum)
+                                pl.loc[len(pl.index)] = [dt, s_dt, asum,"Частичное погашение тела облигации"]  
+                                #------------------------------------------------------
+                                nom_prev = nom_now
                 s_date_prev = coup['s_dates'][index]
             #---------   Добавляем окончательное погашение -----
+            #st.text("Последняя сумма -->" + str(nom_now))
             if nom_now>0:
                 pl.loc[len(pl.index)] = [f_enddate,f_s_enddate,nom_now,"Погашение тела облигации"]
             #--- если купили дешевле, то еще налог - в конце срока
@@ -202,12 +205,12 @@ if sec_code:
             #-------  Выводим основные данные ---
             with col1: 
                 if IRR>0:
-                    st.success("$$\Large\kern4cm Доходность: \space" + str(round(IRR*100,2)) + " \space\% $$")                
+                    st.success("$$\Large\kern5cm Доходность: \space" + str(round(IRR*100,2)) + " \space\% $$")                
                 else:                    
-                    st.error("$$\Large\kern4cm Доходность: \space" + str(round(IRR*100,2)) + " \space\% $$")                
+                    st.error("$$\Large\kern5cm Доходность: \space" + str(round(IRR*100,2)) + " \space\% $$")                
                 #st.subheader("Доходность: " + str(round(IRR*100,2)) + " %")
                 if nom_cur != "SUR":
-                    st.markdown("**Номинал облигации выражен в инностранной валюте " + nom_cur + ". При изменении курса валюты доходность также изменится." + "**")
+                    st.markdown("**Номинал облигации выражен в иностранной валюте " + nom_cur + ". При изменении курса валюты доходность также изменится." + "**")
                 if use_nalog and ((f_buysum+com_sum) < nom_00) and y_amount>=3:
                     st.markdown("**Длительность инвестиции будет составлять более 3-х лет. В этом случае применяется льгота долгосрочного владения (ЛДВ) и налог с разницы суммы погашения и суммы приобретения - не применяется." + "**")
                 sss = "**Дюрация Макколея: " + str(dur) + " лет "
