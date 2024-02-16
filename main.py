@@ -10,39 +10,44 @@ import fi
 #----------------------------------------------------
 #----------------------------------------------------
 st.set_page_config(layout="wide")
-col1, col2, col3 = st.columns([1,2,1])
-with col2:    
+col1, col2 = st.columns([1.2,1])
+with col1:    
     st.subheader("Доходность облигации") 
-col1, col2, col3 = st.columns([1,3,1])
-with col2:   
+with col1:   
     #---------  Описание ------
-    st.markdown("Доходность - это ключевая характеристика облигации. Для ее корректного расчета необходимо учитывать все денежные потоки,")
-    st.markdown("связанные с ценной бумагой - сумму покупки, комиссии, купоны, возврат суммы номинала, причем не обязательно в конце срока.")
+    sss = ""
+    sss = sss + "Доходность - это ключевая характеристика облигации. Для ее корректного расчета необходимо учитывать все денежные потоки,"
+    sss = sss + "связанные с ценной бумагой - сумму покупки, комиссии, купоны, погашение суммы номинала, в том числе, частичное."
+    st.markdown(sss)
     st.markdown("Кроме того, если вы приобретаете облигацию как физическое лицо, необходимо учесть подоходный налог на доходы физических лиц.")
+    st.markdown("Также, важно иметь ввиду, что реальные денежные потоки будут немного расходиться по датам с расчетами на бирже.")
     st.markdown("В конечном итоге, решением задачи является нахождение значения переменной IRR уравнения:")
-col1, col2 = st.columns([2.3,1])
+#col1, col2 = st.columns([2.3,1])
 with col1:  
     #------------
     st.latex(r'''   
             0 = \sum_{n=0}^{N}
                 \frac{CF_n}{\left(1+IRR\right)^{\left(Date_n-Today\right)/365}}
         ''')
-col1, col2, col3 = st.columns([1,3,1])
-with col2:  
+#col1, col2, col3 = st.columns([1,3,1])
+with col1:  
     st.markdown(", где $CF_n$ и $Date_n$  -  сумма и дата n-го потока.")
     st.markdown("Данный алгоритм работает аналогично формуле ЧИСТВНДОХ (XIRR) Excel")
-    #st.markdown("Важно! Расчет пока не работает для облигаций с аммортизацией (погашение частями)")
-st.divider()
+    st.divider()
 #------------------------------------------------------------------------------        
-col1, col2, col3 = st.columns([1,2,1],gap="medium")
-with col1: 
-    st.markdown("**Введите Код, Рег.№ или ISIN облигации (например, RU000A1041B2):**")
-    sec_code = st.text_input("Введите код облигации:", label_visibility="collapsed")
-    #-----------------------------------------------------------------------------------------
-    #button1 = st.button("Получить данные по облигации")
-#if st.session_state.get('button') != True:
-#    st.session_state['button'] = button1 # Saved the state
-#if st.session_state['button'] == True:
+#col1, col2, col3 = st.columns([1,2.2,1],gap="medium")
+st.sidebar.markdown("**Введите Код, Рег.№ или ISIN облигации (например, RU000A1041B2):**")
+sec_code = st.sidebar.text_input("Введите код облигации:", label_visibility="collapsed")
+#----- Тестовые данные (недокументированная возможность)
+if sec_code == "1": # Обычный случай с офертой 
+    sec_code= "RU000A1041B2"
+elif sec_code == "2": # С аммортизацией тела - Бизнес-Недвижимость
+    sec_code= "RU000A1022G1"
+elif sec_code == "3": # С аммортизацией тела (много аммортизаций )
+    sec_code= "RU000A107C91"
+elif sec_code == "4": # Замещающая
+    sec_code= "RU000A1056U0"    
+#-----------------------------------------------------------------------------------------
 if sec_code:
     #--------  получаем данные по облигации ---
     sec_id,sec_name,sec_isin,mat_date,offer_date,nom_sum,nom_cur,r_cur,coup_sum,coup_date,coup_prc,coup_period,nkd_sum,set_date,price=fi.micex_get_sec(sec_code)
@@ -50,7 +55,7 @@ if sec_code:
 	    ret = 0
     else: 
         #-----------  Получаем данные по купонам -------------------------------------
-        ret, pl = fi.get_coups(sec_id)
+        ret, coup = fi.get_coups(sec_id)
     #-------------------------------------------------------------------------------------
     if ret == 0:
         st.text("Не найдены данные по облигации с введенным кодом: " + sec_code + " !!!")
@@ -58,47 +63,61 @@ if sec_code:
         st.text("Облигация " + sec_name + " с переменным купоном. Расчет доходности не представляется возможным (")
     else:
         f_buydate = datetime.datetime.today().date()
+        f_s_buydate = set_date 
         #f_buydate = datetime.datetime(2024, 2, 9).date()
         #----------------  Результаты работы -------------
-        with col2:
+        with col1:
             st.subheader('Облигация "' + sec_name + '"')
             if offer_date != "":
                 st.markdown("**Дата оферты:         " + offer_date.strftime("%d-%m-%Y") + "**")
             #else:
             #   st.markdown("**Дата оферты:      - **")            
             st.markdown("**Дата погашения: " + mat_date.strftime("%d-%m-%Y") + "**")
-            st.markdown("**Дата расчетов на бирже: " + set_date.strftime("%d-%m-%Y") + "**")
+            st.markdown("**Дата расчетов на Московской бирже: " + f_s_buydate.strftime("%d-%m-%Y") + "**")
             st.markdown("**Сумма накопленного купонного дохода (НКД): " + str(nkd_sum) + "**")
+            st.divider()
         #------- Вводим параметры расчета -------
-        st.divider()
         price = float(price)
-        col1, col2, col3 = st.columns([1,2,1],gap="medium")
-        with col1: 
-            st.markdown("**Введите параметры расчета и нажмите кнопку**")
-            price = st.number_input("Цена покупки, %", value=price, min_value=5.0, max_value=300.0)
-            com_pr = st.number_input("Комиссия при покупке, %", value=0.04, min_value=0.0, max_value=1.0)
-            use_offer = "Погашения"
-            if offer_date != "":
-                use_offer = st.radio("Рассчитывать до даты",["Оферты","Погашения"])     
-            use_nalog = st.checkbox('Учитывать подоходный налог 13%', value=True)
-            button1 = st.button("Рассчитать доходность")
+        #col1, col2, col3 = st.columns([1,2.2,1],gap="medium")
+        #with col1: 
+        st.sidebar.divider()
+        st.sidebar.markdown("**Введите параметры расчета и нажмите кнопку**")
+        price = st.sidebar.number_input("Цена покупки, %", value=price, min_value=5.0, max_value=300.0)
+        com_pr = st.sidebar.number_input("Комиссия при покупке, %", value=0.04, min_value=0.0, max_value=1.0)
+        use_offer = "Погашения"
+        if offer_date != "":
+            use_offer = st.sidebar.radio("Рассчитывать до даты",["Оферты","Погашения"])     
+        use_nalog = st.sidebar.checkbox('Учитывать подоходный налог 13%', value=True)
+        #st.sidebar.divider()
+        st.sidebar.markdown('##')
+        button1 = st.sidebar.button("Рассчитать доходность")
         if button1:
+            #----  Номиналы
+            nom_00 = float(nom_sum)   # Начальный
+            nom_now = nom_00        # Текущий
+            nom_prev = nom_now      # Предыдущий
             #---------   Вычисляем парамеры в нужном формате 
-            f_buysum = round(float(nom_sum)*price/100,2)+round(float(nkd_sum),2)
+            f_buysum = round(nom_00*price/100,2)+round(float(nkd_sum),2)
             com_sum = round(f_buysum*com_pr/100,2) 
             if use_offer == 'Оферты':
-                f_enddate = offer_date
+                f_s_enddate = offer_date
             else:
-                f_enddate = mat_date
-            #----  Преобразовать сумму
-            f_endsum = float(nom_sum)   
-            #---------   Оставляем только все данные до погашения или оферты 
-            pl = pl[pl['dates'] <= f_enddate]              
+                f_s_enddate = mat_date
+            f_enddate = fi.get_next_work_day(f_s_enddate)
+            #------------------------------------------------
+            #----------  Немного улучшаем фрейм по купонам --
+            #------------------------------------------------
+            #---------  Фильтр - Оставляем только все данные по купонам до погашения или оферты и не раньше расчетной даты покупки 
+            coup = coup[coup['s_dates'] >= f_s_buydate]              
+            coup = coup[coup['s_dates'] <= f_s_enddate]              
             #------  Если суммы нет, то 0 (ноль)
-            pl.loc[pl['amounts'] == "—", 'amounts'] = 0.00
+            coup.loc[coup['amounts'] == "—", 'amounts'] = 0.00
             #------  Устанавливаем правильный тип поля  
-            pl[['amounts']] = pl[['amounts']].astype(float)
-            #st.text(pl.dtypes)
+            coup[['amounts']] = coup[['amounts']].astype(float)
+            #------------------------------------------------
+            #----------  Сохраняем в общий фрейм   ----------
+            #------------------------------------------------    
+            pl = coup[["dates","s_dates","amounts","comment"]]    #-- оставляем только нужные поля        
             #--------  Если купон = 0, ту устанавливаем последний известный 
             amounts_prev = 0
             for index, row in pl.iterrows():
@@ -108,10 +127,11 @@ if sec_code:
                 else:
                     amounts_prev = row['amounts']     
             #---- Если купон не до даты погашения тела, то вычисляем 
-            last_coup_date = pl['dates'].iloc[-1]  
-            if last_coup_date < f_enddate:    
-                part_sum = round(float(nom_sum)*float((f_enddate-last_coup_date).days)*float(coup_prc)/36500,2)
-                pl.loc[len(pl.index)] = [f_enddate, part_sum,"Купон (часть)"]              
+            if len(pl.index)>0:
+                last_coup_date = pl['s_dates'].iloc[-1]  
+                if last_coup_date < f_s_enddate:    
+                    part_sum = round(float(nom_sum)*float((f_s_enddate-last_coup_date).days)*float(coup_prc)/36500,2)
+                    pl.loc[len(pl.index)] = [f_enddate, f_s_enddate, part_sum,"Купон (часть)"]              
             #---------   Добавляем налог с купонов ---
             if use_nalog:
                 n = 0
@@ -119,35 +139,57 @@ if sec_code:
                     if pl['amounts'][index] !=0:
                         n = n + 1
                         if n == 1:
-                            #------ для 1-го купона база скорректирована на сумму НКД при покуаке ---
-                            pl = pd.concat([pl, pd.DataFrame({'dates': pl['dates'][index], 'amounts': round((pl['amounts'][index]-nkd_sum)*(-0.13),2),'comment': "Налог с суммы купона за вычетом НКД при покупке"}, index=[0])],ignore_index=True)                              
+                            #------ для 1-го купона база скорректирована на сумму НКД при покупке ---
+                            pl = pd.concat([pl, pd.DataFrame({'dates': pl['dates'][index], 's_dates': pl['s_dates'][index],'amounts': round((pl['amounts'][index]-nkd_sum)*(-0.13),2),'comment': "Налог с суммы купона за вычетом НКД при покупке"}, index=[0])],ignore_index=True)                              
                         else:                            
-                            pl = pd.concat([pl, pd.DataFrame({'dates': pl['dates'][index], 'amounts': round(pl['amounts'][index]*(-0.13),2),'comment': "Налог с суммы купона"}, index=[0])],ignore_index=True)                              
+                            pl = pd.concat([pl, pd.DataFrame({'dates': pl['dates'][index], 's_dates': pl['s_dates'][index],'amounts': round(pl['amounts'][index]*(-0.13),2),'comment': "Налог с суммы купона"}, index=[0])],ignore_index=True)                              
             #---------   Добавляем покупку  -----------
-            pl.loc[len(pl.index)] = [f_buydate, f_buysum*(-1),"Сумма сделки покупки, включая НКД"]
+            pl.loc[len(pl.index)] = [f_buydate, f_s_buydate, f_buysum*(-1),"Сумма сделки покупки, включая НКД"]
             #---------   Добавляем комиссию   -----------
             if com_sum>0:
-                pl.loc[len(pl.index)] = [f_buydate, com_sum*(-1),"Комиссия при покупке"]
-            #---------   Добавляем погашение -----
-            pl.loc[len(pl.index)] = [f_enddate,f_endsum,"Погашение тела облигации"]
+                pl.loc[len(pl.index)] = [f_buydate, f_s_buydate, com_sum*(-1),"Комиссия при покупке"]
+            #--------- Проверяем амортизации. Если есть , то заносим                 
+            nnn = 0
+            for index,row in coup.iterrows():
+                nnn = nnn + 1
+                if nnn>=2:  # для второго купона
+                    nom_now = round(coup['amounts'][index] * 36500 / coup['prc'][index] / float((coup['s_dates'][index]-s_date_prev).days),0)
+                    if nom_now < nom_prev:
+                        s_dt = s_date_prev
+                        dt = fi.get_next_work_day(s_dt)
+                        asum = nom_prev - nom_now
+                        if asum*100/nom_now > 3:    # больше 3-х %
+                            #-------  Добавляем запись частичного погашения 
+                            st.text(asum)
+                            pl.loc[len(pl.index)] = [dt, s_dt, asum,"Частичное погашение тела облигации"]  
+                            #------------------------------------------------------
+                            nom_prev = nom_now
+                s_date_prev = coup['s_dates'][index]
+            #---------   Добавляем окончательное погашение -----
+            if nom_now>0:
+                pl.loc[len(pl.index)] = [f_enddate,f_s_enddate,nom_now,"Погашение тела облигации"]
             #--- если купили дешевле, то еще налог - в конце срока
             if use_nalog:
-                if f_buysum < f_endsum:
-                    y_amount = (f_enddate - f_buydate).days//365    #-- число полных лет до погашения
+                if (f_buysum + com_sum) < nom_00:
+                    y_amount = (f_s_enddate - f_buydate).days//365    #-- число полных лет до погашения
                     if y_amount < 3:
-                        pl = pd.concat([pl, pd.DataFrame({'dates': f_enddate, 'amounts': round((f_endsum-f_buysum)*(-0.13),2),'comment': "Налог с разницы сумм погашения и покупки"}, index=[0])],ignore_index=True)                              
+                        pl = pd.concat([pl, pd.DataFrame({'dates': f_enddate, 's_dates': f_s_enddate,'amounts': round((nom_sum-f_buysum-com_sum)*(-0.13),2),'comment': "Налог с разницы сумм погаш. и покупки с комиссией"}, index=[0])],ignore_index=True)     
+            #st.dataframe(pl,800)                           
             #-------  Запуск расчета ------
-            IRR = xirr(pl)
+            pl2 = pl[["dates","amounts"]] 
+            IRR = xirr(pl2)
             #st.divider()
             #-------  Только ненулевые суммы  
             rslt_pl = pl[pl['amounts'] != 0] 
             #-------  Перерасчитываем дисконтируемые суммы потоков + добавляем столбец даты в нужном формате 
             rslt_pl['d_ams'] = 0
             rslt_pl['str_dates'] = ""
+            rslt_pl['str_s_dates'] = ""
             dams_total = 0
             dur = 0
             for index, row in rslt_pl.iterrows():
                 rslt_pl['str_dates'].loc[index] = rslt_pl['dates'].loc[index].strftime("%d-%m-%Y")
+                rslt_pl['str_s_dates'].loc[index] = rslt_pl['s_dates'].loc[index].strftime("%d-%m-%Y")
                 #----------------------------------------------                
                 ddelta = (rslt_pl['dates'].loc[index]-f_buydate).days
                 dams = rslt_pl['amounts'].loc[index]/((1+IRR)**(ddelta/365))
@@ -158,27 +200,38 @@ if sec_code:
             #----  Дюрация 
             dur = round(dur/f_buysum/365,1)
             #-------  Выводим основные данные ---
-            with col2: 
-                st.subheader("Доходность: " + str(round(IRR*100,2)) + " %")
-                st.markdown("**Дюррация Макколея: " + str(dur) + " лет**")
+            with col1: 
+                if IRR>0:
+                    st.success("$$\Large\kern4cm Доходность: \space" + str(round(IRR*100,2)) + " \space\% $$")                
+                else:                    
+                    st.error("$$\Large\kern4cm Доходность: \space" + str(round(IRR*100,2)) + " \space\% $$")                
+                #st.subheader("Доходность: " + str(round(IRR*100,2)) + " %")
+                if nom_cur != "SUR":
+                    st.markdown("**Номинал облигации выражен в инностранной валюте " + nom_cur + ". При изменении курса валюты доходность также изменится." + "**")
+                if use_nalog and ((f_buysum+com_sum) < nom_00) and y_amount>=3:
+                    st.markdown("**Длительность инвестиции будет составлять более 3-х лет. В этом случае применяется льгота долгосрочного владения (ЛДВ) и налог с разницы суммы погашения и суммы приобретения - не применяется." + "**")
+                sss = "**Дюрация Макколея: " + str(dur) + " лет "
                 dur_m = round(dur/(1+IRR),1)
-                st.markdown("**Модифицированная дюррация: " + str(dur_m) + "**")
+                sss = sss + ", Модифицированная дюрация: " + str(dur_m) + "**"
+                st.markdown(sss)
                 #-------  Сортируем и выводим подробности расчета 
-                st.divider()
-                st.markdown("**Список всех денежных потоков**")    
+                #st.divider()
+            with col2: 
+                st.markdown("**Все денежные потоки**")    
                 #-------  Перерасчитываем дисконтируемые суммы потоков 
                 rslt_pl2 = rslt_pl.sort_values(by=['dates'])
                 rslt_pl2.reset_index(drop= True , inplace= True )     #-- сброс индекса  
-                rslt_pl3 = rslt_pl2[['str_dates','comment','amounts','d_ams']]
-                rslt_pl3.columns = ['  Дата','         Вид суммы', '  Сумма','Дисконтируемая сумма']   #-- переименовать столбцы
-                st.dataframe(rslt_pl3,700)  
-            col1, col2 = st.columns([1,1.7])
-            with col2: 
+                rslt_pl3 = rslt_pl2[['str_dates','str_s_dates','comment','amounts','d_ams']]
+                rslt_pl3.columns = ['Дата потока','  Дата расч.','         Вид суммы', '  Сумма','Дисконтир.сумма']   #-- переименовать столбцы
+                if len(rslt_pl3.index)>=25:
+                    st.dataframe(rslt_pl3, 1200, 900) # Сначала ширина, потом - высота 
+                else:
+                    st.dataframe(rslt_pl3, 1200) # Сначала ширина, потом - высота 
+            #col1, col2 = st.columns([1,1.1])
+            #with col2: 
                 st.markdown("**Итоговая сумма дисконтируемых денежных потоков:  " + str(round(dams_total,2)) + "**")
-            if use_nalog and (f_buysum < f_endsum) and y_amount>=3:
-                st.markdown("**Внимание! Длительность инвестиции составило более 3-х лет. В связи с этим, применяется льгота долгосрочного владения (ЛДВ) и налог с разницы суммы погашения и суммы приобретения - не применяется." + "**")
        #-----------------------------------------------------------------------------------------
-st.divider()
-col1, col2 = st.columns([1,1.2])
+#st.divider()
+col1, col2 = st.columns([4,1])
 with col2:    
     st.text("e-mail: tarasbmal@gmail.com")
