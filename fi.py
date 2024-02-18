@@ -1,17 +1,37 @@
 #---------------------------------------------------------------------------------------
-#----   Функция получения SECID по параметру, который может быть  SECID,ISIN, Рег.Номеру
-#----   а также, параллельно, остальных параметров с сайта Московской биржи
+#----   Функция масссива всех доступных облигаций во фрейм для последующего выбора
 #---------------------------------------------------------------------------------------
-def micex_get_sec(p_code):
+def micex_get_sec_all(xx):
 	import pandas as pd
-	import datetime 
 	#-----   Выгружаем данные с сайта биржи в формате JSON -----
 	url = f'https://iss.moex.com/iss/engines/stock/markets/bonds/securities.json?iss.only=securities'
 	data = pd.read_json(url)
 	#---- преобразуем данные в нормальный фрейм -----
 	data = pd.DataFrame(data=data.iloc[1, 0], columns=data.iloc[0, 0])
+	#-----  Фильтруем по секциям   ----
+	rrr = data[ ((data["BOARDID"] == 'TQOB') | (data["BOARDID"] == 'TQCB') | (data["BOARDID"] == 'TQOD') | (data["BOARDID"] == 'TQIR') | (data["BOARDID"] == 'TQOY')) & data["STATUS"] != 'N'].sort_values(by=['SHORTNAME']).copy()	
+	#------  Удаление дублей ------
+	isin_prev = "xxx"
+	yyy = "xxx"
+	for index,row in rrr.iterrows():
+		if row['ISIN'] == isin_prev:	# повтор
+        	#-------- Удаляем 
+			rrr.drop (index, inplace=True)
+		else:
+			isin_prev = row['ISIN']
+	#---------------------------------
+	return rrr
+
+#---------------------------------------------------------------------------------------
+#----   Функция получения данных по бумаге из уже готового фрейма,
+#----   полученного с сайта Московской биржи
+#----   p_secs - массив (фрейм) со всеми облигациями, p_isin - ISIN конкретной бумаги 
+#---------------------------------------------------------------------------------------
+def get_sec_one(p_secs, p_isin):
+	import pandas as pd
+	import datetime 
 	#-----  Фильтруем по секциям и кодам  ----
-	res = data[( (data["BOARDID"] == 'TQOB') | (data["BOARDID"] == 'TQCB') | (data["BOARDID"] == 'TQOD') | (data["BOARDID"] == 'TQIR') | (data["BOARDID"] == 'TQOY')) & ( (data["SECID"] == p_code) | (data["ISIN"] == p_code) | (data["REGNUMBER"] == p_code))]	#ret = res['SECID'].max()
+	res = p_secs[p_secs["ISIN"] == p_isin]	
 	if len(res.index)>0:
 		#-- Код бумаги 
 		sec_id = res['SECID'].iloc[0]
@@ -20,7 +40,10 @@ def micex_get_sec(p_code):
 		#-- ISIN
 		sec_isin = res['ISIN'].iloc[0]
 		#-- Дата погашения
-		mat_date = datetime.datetime.strptime(res['MATDATE'].iloc[0], "%Y-%m-%d").date()
+		if res['MATDATE'].iloc[0] != "0000-00-00":
+			mat_date = datetime.datetime.strptime(res['MATDATE'].iloc[0], "%Y-%m-%d").date()
+		else:
+			mat_date = ""
 		#-- Дата оферты 
 		if len(str(res['OFFERDATE'].iloc[0]))>6:
 			offer_date = datetime.datetime.strptime(res['OFFERDATE'].iloc[0], "%Y-%m-%d").date()
@@ -101,7 +124,7 @@ def get_coups(p_isin):
     response = requests.get(url=url,stream=True, headers=hdr, verify=False)
     st_code = response.status_code
     if st_code != 200:
-        return 0, ""    #-- облигация не найдена
+        return -1, ""    #-- страничка по купонам не найдена
     #-----   Купоны -----------------
     tabs = pd.read_html(response.text)
     df = tabs[0]
@@ -124,7 +147,7 @@ def get_coups(p_isin):
         else:
         	coup['prc'][index] = 0.00
     coup = coup[["dates","s_dates","amounts","comment","prc"]]    #-- оставляем только нужные поля
-    return 1, coup    #-- успешное завершение, облигация найдена
+    return coup.shape[0], coup    #-- количество записей и сам фрейм
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
