@@ -32,6 +32,8 @@ def get_sec_one(p_secs, p_isin):
 	import datetime 
 	#-----  Фильтруем по секциям и кодам  ----
 	res = p_secs[p_secs["ISIN"] == p_isin]	
+	#---- Выгрузка в файл для тестирования
+	#res.to_csv("res.csv",sep=";")
 	if len(res.index)>0:
 		#-- Код бумаги 
 		sec_id = res['SECID'].iloc[0]
@@ -73,7 +75,10 @@ def get_sec_one(p_secs, p_isin):
 		#-- Дата расчетов
 		set_date = datetime.datetime.strptime(res['SETTLEDATE'].iloc[0], "%Y-%m-%d").date()
 		#-- Цена (предыдущая)
-		price = res['PREVPRICE'].iloc[0]
+		if str(res['PREVPRICE'].iloc[0]) != "nan":
+			price = float(res['PREVPRICE'].iloc[0])
+		else:
+			price = 100.00
 		#-----------------------------------------------------------------------------
 		#-- Если скорее всего, замещающая облигация, нужно пересчитывать НКД
 		#-----------------------------------------------------------------------------
