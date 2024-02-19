@@ -131,7 +131,10 @@ def get_coups(p_isin):
     if st_code != 200:
         return -1, ""    #-- страничка по купонам не найдена
     #-----   Купоны -----------------
-    tabs = pd.read_html(response.text)
+    try:
+        tabs = pd.read_html(response.text)
+    except:
+        return -2, ""    #-- таблица по купонам не найдена
     df = tabs[0]
     #-----  Выгрузка в файл для тестирования
     #df.to_csv("coups.csv",sep=";")
