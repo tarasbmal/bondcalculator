@@ -283,7 +283,8 @@ if sec_code:
                     nnn = rslt_pl3.shape[0]
                     if nnn>=25:
                         nnn = 25
-                    st.dataframe(rslt_pl3, 1200, (nnn+1)*36+20) # Сначала ширина, потом - высота 
+                    #st.dataframe(rslt_pl3, 1200, (nnn+1)*36+20) # Сначала ширина, потом - высота 
+                    st.dataframe(rslt_pl3, 1200, int(round((nnn+1)*36.7,0))) # Сначала ширина, потом - высота 
                 #col1, col2 = st.columns([1,1.1])
                 #with col2: 
                     st.markdown("**Итоговая сумма дисконтируемых денежных потоков:  " + str(round(dams_total,2)) + "**")
