@@ -91,7 +91,7 @@ def get_sec_one(p_secs, p_isin):
 		if res['NEXTCOUPON'].iloc[0] != "0000-00-00":
 			coup_date = datetime.datetime.strptime(res['NEXTCOUPON'].iloc[0], "%Y-%m-%d").date()
 		else:
-			coup_date = ""
+			coup_date = get_next_work_day(datetime.datetime.today().date())
 		#-- % купона - нужно еще делить на 10000
 		coup_prc = res['COUPONPERCENT'].iloc[0]
 		#-- Период купона 
@@ -110,14 +110,15 @@ def get_sec_one(p_secs, p_isin):
 		#-----------------------------------------------------------------------------
 		if res['FACEUNIT'].iloc[0] != 'SUR' and  res['CURRENCYID'].iloc[0] == 'SUR':	
 			#print("Замещающая облигация !!!")			
-			#-----  Сегодня 
-			buydate = datetime.datetime.today().date()
-			#-----  Дней до купона
-			days = (coup_date-buydate).days-1
-			#-----  Осталось НКД до купона
-			left_nkd = (res['FACEVALUE'].iloc[0] * res['COUPONPERCENT'].iloc[0] * days) / 36500
-			#----- Расчетный НКД
-			nkd = round(res['COUPONVALUE'].iloc[0] - left_nkd,2)	
+			#-----  Сегодня (Хотя здемь правильнее брать дату расчетов)
+			s_buydate = get_next_work_day(datetime.datetime.today().date())
+			if coup_date > s_buydate:
+				#-----  Дней до купона
+				days = (coup_date-s_buydate).days-1
+				#-----  Осталось НКД до купона
+				left_nkd = (res['FACEVALUE'].iloc[0] * res['COUPONPERCENT'].iloc[0] * days) / 36500
+				#----- Расчетный НКД
+				nkd = round(res['COUPONVALUE'].iloc[0] - left_nkd,2)	
 			#print(nkd)
 		#------------------------------------------------------
 		#------------------------------------------------------
