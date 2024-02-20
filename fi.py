@@ -6,9 +6,9 @@ def micex_get_sec_all(xx):
 	#-----   Выгружаем данные с сайта биржи в формате JSON -----
 	url = f'https://iss.moex.com/iss/engines/stock/markets/bonds/securities.json?iss.only=securities'
 	data = pd.read_json(url)
-	#---- преобразуем данные в нормальный фрейм -----
+	#---- преобразуем данные в нормальный фрейм  -----
 	data = pd.DataFrame(data=data.iloc[1, 0], columns=data.iloc[0, 0])
-	#-----  Фильтруем по секциям   ----
+	#-----  Фильтруем по секциям  ----
 	rrr = data[ ((data["BOARDID"] == 'TQOB') | (data["BOARDID"] == 'TQCB') | (data["BOARDID"] == 'TQOD') | (data["BOARDID"] == 'TQIR') | (data["BOARDID"] == 'TQOY')) & data["STATUS"] != 'N'].sort_values(by=['SHORTNAME']).copy()	
 	#------  Удаление дублей ------
 	isin_prev = "xxx"
@@ -19,6 +19,32 @@ def micex_get_sec_all(xx):
 			rrr.drop (index, inplace=True)
 		else:
 			isin_prev = row['ISIN']
+	#---------------------------------
+	return rrr
+
+#---------------------------------------------------------------------------------------
+#----   Функция масссива всех доступных цен по облигациям во фрейм для последующего выбора
+#---------------------------------------------------------------------------------------
+def micex_get_price_all(xx):
+	import pandas as pd
+	#-----   Выгружаем данные с сайта биржи в формате JSON -----
+	url = f'https://iss.moex.com/iss/engines/stock/markets/bonds/securities.json?iss.only=marketdata'
+	data = pd.read_json(url)
+	#---- преобразуем данные в нормальный фрейм с нужными полями -----
+	data = pd.DataFrame(data=data.iloc[1, 0], columns=data.iloc[0, 0])[["SECID","BOARDID","BID","OFFER"]]
+	#-----  Фильтруем только нужные секции и только с ценами  ----
+	rrr = data[(( data["BOARDID"] == 'TQOB') | (data["BOARDID"] == 'TQCB') | (data["BOARDID"] == 'TQOD') | (data["BOARDID"] == 'TQIR') | (data["BOARDID"] == 'TQOY')) & (data["BID"].isnull()==False) & (data["OFFER"].isnull()==False) ].sort_values(by=['SECID']).copy()	
+	#----  Выгрузка данных (для тестрования)
+	#rrr.to_csv("price.csv", sep=';')
+	#------  Удаление дублей ------
+	secid_prev = "xxx"
+	yyy = "xxx"
+	for index,row in rrr.iterrows():
+		if row['SECID'] == secid_prev:	# повтор
+        	#-------- Удаляем 
+			rrr.drop (index, inplace=True)
+		else:
+			isin_prev = row['SECID']
 	#---------------------------------
 	return rrr
 
