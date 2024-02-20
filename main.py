@@ -15,16 +15,20 @@ with col1:
     st.subheader("Доходность облигации") 
 with col1:   
     #---------  Описание ------
-    st.markdown("Эффективная доходность к погашению - это ключевой показатель при принятии решения о приобретении облигации.")
-    sss = ""
-    sss = sss + "Этот универсальный и независимый от особенностей погашения показатель позволяет сравнивать различные облигации и другие аналогичные инструменты, например, банковские депозиты. "  
-    st.markdown(sss)
-    sss = ""
-    sss = sss + "Для корректного расчета необходимо учитывать все денежные потоки, связанные с ценной бумагой - сумму покупки, комиссии, купоны, погашение номинала, в том числе, частичное. "
-    sss = sss + "Для частного инвестора необходимо также учесть подоходный налог на доходы физических лиц. "
-    sss = sss + "Также, важно иметь ввиду, что даты ваших реальных денежных потоков немного расходятся с датами расчетов на бирже."
-    st.markdown(sss)
-    st.markdown("В конечном итоге, для решения задачи необходимо найти значение переменной IRR в следующем уравнении:")
+    st.markdown("Добро пожаловать на сервис расчета ключевого параметра облигации - эффективной доходности к погашению !")
+    st.markdown("Если вы выбираете облигацию для приобретения, то значение доходности - это один из основных критериев при принятии решения.")
+    st.markdown("В отличие от других аналогичных сервисов, акцент здесь сделан на точность учета всех денежных потоков, включая комиссию при покупке и подоходный налог.")
+    #st.markdown("Эффективная доходность к погашению - это ключевой показатель при принятии решения о приобретении облигации.")
+    #sss = ""
+    #sss = sss + "Этот универсальный и независимый от особенностей погашения показатель позволяет сравнивать различные облигации и другие аналогичные инструменты, например, банковские депозиты. "  
+    #st.markdown(sss)
+    #sss = ""
+    #sss = sss + "Для корректного расчета необходимо учитывать все денежные потоки, связанные с ценной бумагой - сумму покупки, комиссии, купоны, погашение номинала, в том числе, частичное. "
+    #sss = sss + "Для частного инвестора необходимо также учесть подоходный налог на доходы физических лиц. "
+    #sss = sss + "Также, важно иметь ввиду, что даты ваших реальных денежных потоков немного расходятся с датами расчетов на бирже."
+    #st.markdown(sss)
+    st.markdown("**Немного математики...**")
+    st.markdown("Эффективная доходность - это значение переменной IRR в следующем уравнении:")
 #col1, col2 = st.columns([2.3,1])
 with col1:  
     #------------
@@ -34,67 +38,77 @@ with col1:
         ''')
 #col1, col2, col3 = st.columns([1,3,1])
 with col1:  
-    st.markdown(", где $CF_n$ и $Date_n$  -  сумма и дата n-го потока.")
-    st.markdown("В приложении Excel подобная задача решается применением формулы ЧИСТВНДОХ (XIRR) к таблице будущих денежных потоков.")
-    st.divider()
-#----   Масссив всех доступных облигаций во фрейм для последующего выбора
+    st.markdown(", где $CF_n$ и $Date_n$  -  сумма и дата n-го денежного потока.")
+    st.markdown("В приложении Excel задача решается применением формулы ЧИСТВНДОХ (XIRR) к таблице денежных потоков.")
+#----   Масссив всех доступных облигаций во фрейм для последующего выбора и массив цен 
 sec_all  = fi.micex_get_sec_all(0)
 #sec_all.to_csv("sec_all.csv",sep=";")   #-----  Выгрузка в файл для тестирования
+price_all = fi.micex_get_price_all(0)
+#price_all.to_csv("price_all.csv",sep=";")   #-----  Выгрузка в файл для тестирования
 #------------------------------------------------------------------------------        
 #col1, col2, col3 = st.columns([1,2.2,1],gap="medium")
-st.sidebar.markdown("**Введите ISIN, Код регистрации или часть наименования облигации и нажмите Enter**")
-sec_code = st.sidebar.text_input("Введите код облигации:", label_visibility="collapsed")
+isn = ""
+st.sidebar.markdown("**Шаг 1. Введите любой из параметров облигации: ISIN, № гос.регистрации или часть наименования и нажмите Enter**")
+sec_mask = st.sidebar.text_input("", label_visibility="collapsed")
 #----- Тестовые данные (недокументированная возможность)
-if sec_code == "0": # Тестовый режим перебора всех облигаций
+if sec_mask == "0": # Тестовый режим перебора всех облигаций
     ntest = st.sidebar.number_input("N теста", value=1, min_value=1, max_value=2000)
     i = 0
     for index,row in sec_all.iterrows():
         i = i+1
         if i == ntest:
-            sec_code = row['ISIN'] 
-elif sec_code == "1": # Обычный случай с офертой 
-    sec_code= "RU000A1041B2"
-elif sec_code == "2": # С аммортизацией тела - Бизнес-Недвижимость
-    sec_code= "RU000A1022G1"
-elif sec_code == "3": # С аммортизацией тела (много аммортизаций )
-    sec_code= "RU000A107C91"
-elif sec_code == "4": # Замещающая
-    sec_code= "RU000A1056U0"    
-elif sec_code == "5": # Ошибка
-    sec_code= "XS1951067039"    
+            sec_mask = row['ISIN'] 
+elif sec_mask == "1": # Обычный случай с офертой 
+    sec_mask= "RU000A1041B2"
+elif sec_mask == "2": # С аммортизацией тела - Бизнес-Недвижимость
+    sec_mask= "RU000A1022G1"
+elif sec_mask == "3": # С аммортизацией тела (много аммортизаций )
+    sec_mask= "RU000A107C91"
+elif sec_mask == "4": # Замещающая
+    sec_mask= "RU000A1056U0"    
+elif sec_mask == "5": # Ошибка
+    sec_mask= "XS1951067039"    
 #-----  Фильтруем  кодам  ----
-sec_filter = sec_all[(sec_all["SECID"] == sec_code) | (sec_all["ISIN"] == sec_code) | (sec_all["REGNUMBER"] == sec_code)]	
+sec_filter = sec_all[(sec_all["SECID"] == sec_mask) | (sec_all["ISIN"] == sec_mask) | (sec_all["REGNUMBER"] == sec_mask)]	
+#st.sidebar.text("-111->"+sec_mask+"<--"+str(sec_filter.shape[0]))
 if sec_filter.shape[0] == 0:    #-- число записей = 0, т.е. не нашли по номеру, ищем по имени
-    sec_filter = sec_all[sec_all["SECNAME"].str.contains(sec_code, case=False)]
-if sec_code:
+    sec_filter = sec_all[sec_all["SECNAME"].str.contains(sec_mask, case=False)]
+    #st.sidebar.text("-222->"+sec_mask+"<--"+str(sec_filter.shape[0]))
+if sec_filter.shape[0] == 1:
+    #st.sidebar.text("-333->"+sec_mask+"<--"+str(sec_filter.shape[0]))
+    isn = sec_filter["ISIN"].iloc[0]     
+if sec_mask != "" and sec_filter.shape[0] > 1: #-- число записей больше 1, нужно уточнить
+    #st.sidebar.text("-444->"+sec_mask+"<--"+str(sec_filter.shape[0]))
     #-----------------   Выбор из списка  ----------------------------------------
+    #st.sidebar.text("-->"+sec_mask+"<--")
+    st.sidebar.markdown("**Уточните свой выбор, пожалуйста**")
     ppp = st.sidebar.selectbox("Выбрать облигацию", sec_filter['SHORTNAME']+ " ,  " +sec_filter['ISIN'], label_visibility="collapsed")   
-    isin = ""
+    isn = ""
     if ppp != None:     
-        isin = ppp[-12:]
-    #st.sidebar.text(isin) 
-    #st.sidebar.text(ppp) 
-    sec_code = isin 
+        isn = ppp[-12:]
+if sec_mask != "" and isn == "":
+    st.sidebar.text("Не могу найти такую бумагу (")
+if isn != "":    
     #--------  получаем данные по облигации ---
-    #sec_id,sec_name,sec_isin,mat_date,offer_date,nom_sum,nom_cur,r_cur,coup_sum,coup_date,coup_prc,coup_period,nkd_sum,set_date,price=fi.micex_get_sec(sec_code)
-    sec_id,sec_name,sec_isin,mat_date,offer_date,nom_sum,nom_cur,r_cur,coup_sum,coup_date,coup_prc,coup_period,nkd_sum,set_date,price=fi.get_sec_one(sec_filter, isin)
+    sec_id,sec_name,sec_isin,mat_date,offer_date,nom_sum,nom_cur,r_cur,coup_sum,coup_date,coup_prc,coup_period,nkd_sum,set_date,price=fi.get_sec_one(sec_filter, isn)
     if sec_id == "":
-        st.error("Не найдена облигация с ISIN: " + isin + " !!!")
+        st.error("Не найдена облигация с ISIN: " + isn + " !!!")
     else: 
         f_buydate = datetime.datetime.today().date()
         f_s_buydate = set_date 
         #f_buydate = datetime.datetime(2024, 2, 9).date()
         #----------------  Результаты работы -------------
         with col1:
+            st.divider()
             st.subheader(sec_name) 
+            st.markdown("**ISIN: " + isn + "**")
             #--------  Разделим колонку еще на 2 колонки 
             c1, c2 = col1.columns([1,1])
             with c1:
-                st.markdown("**ISIN: " + sec_isin + "**")
                 if nom_cur == "SUR":
                     nom_cur = "RUB"
                 st.markdown("**Текущий номинал: " + str(int(nom_sum)) + " " + nom_cur + "**")
-                st.markdown("**Сумма накопленного купонного дохода (НКД): " + str(nkd_sum) + "**")
+                st.markdown("**Накопленный купонный доход (НКД): " + str(round(nkd_sum,2)) + "**")
             with c2:
                 if offer_date != "":
                     st.markdown("**Дата оферты:         " + offer_date.strftime("%d-%m-%Y") + "**")
@@ -104,21 +118,27 @@ if sec_code:
                     st.markdown("**Дата погашения: " + mat_date.strftime("%d-%m-%Y") + "**")
                 else:
                     st.markdown("**Дата погашения:**")
-                st.markdown("**Дата расчетов на Московской бирже: " + f_s_buydate.strftime("%d-%m-%Y") + "**")
+        #-------  Ищем текущую цену, чтобы предложить по умолчанию
+        price_filter = price_all[price_all["SECID"] == sec_id]	
+        if price_filter.shape[0] > 0:    #-- число записей = 0, поэтому берем цену из свежих
+            price = round((price_filter["BID"].iloc[0] + price_filter["OFFER"].iloc[0])/2,2) 
+            #st.sidebar.text("--Новая цена !!!--")   
+        #else:
+        #    st.sidebar.text("--Старая цена--")            
         #------- Вводим параметры расчета -------
-        #col1, col2, col3 = st.columns([1,2.2,1],gap="medium")
-        #with col1: 
-        st.sidebar.divider()
-        st.sidebar.markdown("**Введите параметры для расчета и нажмите кнопку**")
+        #st.sidebar.divider()
+        st.sidebar.markdown("#")
+        #st.sidebar.markdown("#")
+        st.sidebar.markdown('**Шаг 2. Введите параметры для расчета и нажмите кнопку "Рассчитать"**')
         price = st.sidebar.number_input("Цена покупки, %", value=price, min_value=5.0, max_value=300.0)
         com_pr = st.sidebar.number_input("Комиссия при покупке, %", value=0.04, min_value=0.0, max_value=1.0)
         use_offer = "Погашения"
         if offer_date != "":
             use_offer = st.sidebar.radio("Рассчитывать до даты",["Оферты","Погашения"])     
-        use_nalog = st.sidebar.checkbox('Учитывать подоходный налог 13%', value=True)
+        use_nalog = st.sidebar.checkbox('Учесть подоходный налог 13%', value=True)
         #st.sidebar.divider()
         st.sidebar.markdown('##')
-        button1 = st.sidebar.button("Рассчитать доходность")
+        button1 = st.sidebar.button("$$\kern1.5cm Рассчитать \kern1.5cm$$")
         if button1:
             #-----------  Получаем данные по купонам -------------------------------------
             ret, coup = fi.get_coups(sec_id)
@@ -149,7 +169,7 @@ if sec_code:
                 #----------  Немного улучшаем фрейм по купонам --
                 #------------------------------------------------
                 #---------  Фильтр - Оставляем только все данные по купонам до погашения или оферты и не раньше расчетной даты покупки 
-                coup = coup[coup['s_dates'] >= f_s_buydate]              
+                coup = coup[coup['s_dates'] > f_s_buydate]              
                 coup = coup[coup['s_dates'] <= f_s_enddate]              
                 #------  Если суммы нет, то 0 (ноль)
                 coup.loc[coup['amounts'] == "—", 'amounts'] = 0.00
@@ -276,20 +296,25 @@ if sec_code:
                     #st.divider()
                 with col2: 
                     st.markdown("##")    # пропуск строки
-                    st.markdown("**Все денежные потоки**")    
+                    st.markdown("**Все будущие денежные потоки (знак суммы соответствует направлению)**")    
                     #-------  Перерасчитываем дисконтируемые суммы потоков 
                     rslt_pl2 = rslt_pl.sort_values(by=['dates'])
                     rslt_pl2.reset_index(drop= True , inplace= True )     #-- сброс индекса  
                     rslt_pl3 = rslt_pl2[['str_dates','str_s_dates','comment','amounts','d_ams']]
-                    rslt_pl3.columns = ['Дата потока','  Дата расч.','         Вид суммы', '  Сумма','Дисконтир.сумма']   #-- переименовать столбцы
+                    rslt_pl3.columns = ['Дата потока','  Дата бирж.','         Вид суммы', '  Сумма','Дисконт.сумма']   #-- переименовать столбцы
                     nnn = rslt_pl3.shape[0]
-                    if nnn>=25:
-                        nnn = 25
+                    if nnn>=22:
+                        nnn = 22
                     #st.dataframe(rslt_pl3, 1200, (nnn+1)*36+20) # Сначала ширина, потом - высота 
-                    st.dataframe(rslt_pl3, 1200, int(round((nnn+1)*36.4,0))+8) # Сначала ширина, потом - высота 
+                    #st.dataframe(rslt_pl3, 1200, int(round((nnn+1)*36.4,0))+8) # Сначала ширина, потом - высота 
+                    #st.dataframe(rslt_pl3, 1200, int(round((nnn+1)*36.5,0))+4) # Сначала ширина, потом - высота 
+                    #st.dataframe(rslt_pl3, 1200, int(round((nnn+1)*36.3,0))+6) # Сначала ширина, потом - высота 
+                    st.dataframe(rslt_pl3, 1200, int(round((nnn+1)*36.1,0))+8) # Сначала ширина, потом - высота 
                 #col1, col2 = st.columns([1,1.1])
                 #with col2: 
-                    st.markdown("**Итоговая сумма дисконтируемых денежных потоков:  " + str(round(dams_total,2)) + "**")
+                    c1, c2 = col2.columns([1,2])
+                    with c2:
+                        st.markdown("**Сумма дисконтируемых денежных потоков, Итого:  " + str(round(dams_total,2)) + "**")
             #-----------------------------------------------------------------------------------------
 #st.divider()
 col1, col2 = st.columns([4,1])
